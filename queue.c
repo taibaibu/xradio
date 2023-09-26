@@ -156,15 +156,9 @@ static void __xradio_queue_gc(struct xradio_queue *queue,
 	}
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 static void xradio_queue_gc(struct timer_list *t)
 {
 	struct xradio_queue *queue = from_timer(queue, t, gc);
-#else
-static void xradio_queue_gc(unsigned long arg)
-{
-	struct xradio_queue *queue = (struct xradio_queue *)arg;
-#endif
 	LIST_HEAD(list);
 
 	spin_lock_bh(&queue->lock);
@@ -216,13 +210,7 @@ int xradio_queue_init(struct xradio_queue *queue,
 	INIT_LIST_HEAD(&queue->pending);
 	INIT_LIST_HEAD(&queue->free_pool);
 	spin_lock_init(&queue->lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 	timer_setup(&queue->gc, xradio_queue_gc, 0);
-#else
-	init_timer(&queue->gc);
-	queue->gc.data = (unsigned long)queue;
-	queue->gc.function = xradio_queue_gc;
-#endif
 
 	queue->pool = kzalloc(sizeof(struct xradio_queue_item) * capacity,
 	                         GFP_KERNEL);

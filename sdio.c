@@ -148,8 +148,11 @@ static int xradio_probe_of(struct sdio_func *func)
 
 	of_id = of_match_node(xradio_sdio_of_match_table, np);
 	if (!of_id)
-		return -ENODEV;
-
+    {
+        dev_err(dev, "SDIO: xradio,xr819 not found in DTS\n");
+        return -ENODEV;
+    }
+    
 	//pdev_data->family = of_id->data;
 
 	irq = irq_of_parse_and_map(np, 0);
@@ -206,11 +209,7 @@ static void sdio_remove(struct sdio_func *func)
 	xradio_core_deinit(func);
 	sdio_claim_host(func);
 	sdio_disable_func(func);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
 	mmc_hw_reset(card);
-#else
-	mmc_hw_reset(card->host);
-#endif
 	sdio_release_host(func);
 }
 

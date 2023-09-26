@@ -213,11 +213,7 @@ static int xradio_set_tim_impl(struct xradio_vif *priv, bool aid0_bit_set)
 	ap_printk(XRADIO_DBG_MSG, "%s mcast: %s.\n", __func__, 
 	          aid0_bit_set ? "ena" : "dis");
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 	skb = ieee80211_beacon_get_tim(priv->hw, priv->vif, &tim_offset, &tim_length, 0);
-#else
-	skb = ieee80211_beacon_get_tim(priv->hw, priv->vif, &tim_offset, &tim_length);
-#endif
 	if (!skb) {
 		__xradio_flush(hw_priv, true, priv->if_id);
 		return -ENOENT;
@@ -353,25 +349,14 @@ static int xradio_set_btcoexinfo(struct xradio_vif *priv)
 	return ret;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 void xradio_bss_info_changed(struct ieee80211_hw *dev,
 			     struct ieee80211_vif *vif,
 			     struct ieee80211_bss_conf *info,
 			     u64 changed)
-#else
-void xradio_bss_info_changed(struct ieee80211_hw *dev,
-			     struct ieee80211_vif *vif,
-			     struct ieee80211_bss_conf *info,
-			     u32 changed)
-#endif
 {
 	struct xradio_common *hw_priv = dev->priv;
 	struct xradio_vif *priv = xrwl_get_vif_from_ieee80211(vif);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 	struct ieee80211_vif_cfg *cfg = &vif->cfg;
-#else
-	struct ieee80211_bss_conf *cfg = info;
-#endif
 
 	mutex_lock(&hw_priv->conf_mutex);
 	if (changed & BSS_CHANGED_BSSID) {
@@ -483,15 +468,9 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 				/* TODO:COMBO:Change this once
 				* mac80211 changes are available */
 				BUG_ON(!hw_priv->channel);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
 				hw_priv->ht_oper.ht_cap = sta->deflink.ht_cap;
 				priv->bss_params.operationalRateSet =__cpu_to_le32(
 				  xradio_rate_mask_to_wsm(hw_priv, sta->deflink.supp_rates[hw_priv->channel->band]));
-#else
-				hw_priv->ht_oper.ht_cap = sta->ht_cap;
-				priv->bss_params.operationalRateSet =__cpu_to_le32(
-				  xradio_rate_mask_to_wsm(hw_priv, sta->supp_rates[hw_priv->channel->band]));
-#endif
 				/* TODO by Icenowy: I think this may lead to some problems. */
 //				hw_priv->ht_oper.channel_type   = info->channel_type;
 				hw_priv->ht_oper.operation_mode = info->ht_operation_mode;
@@ -882,15 +861,9 @@ void xradio_multicast_stop_work(struct work_struct *work)
 	}
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 void xradio_mcast_timeout(struct timer_list *t)
 {
 	struct xradio_vif *priv = from_timer(priv, t, mcast_timeout);
-#else
-void xradio_mcast_timeout(unsigned long arg)
-{
-	struct xradio_vif *priv = (struct xradio_vif *)arg;
-#endif
 	ap_printk(XRADIO_DBG_WARN, "Multicast delivery timeout.\n");
 	spin_lock_bh(&priv->ps_state_lock);
 	priv->tx_multicast = priv->aid0_bit_set && priv->buffered_multicasts;
@@ -982,11 +955,7 @@ static int xradio_upload_beacon(struct xradio_vif *priv)
 	if (priv->vif->p2p || hw_priv->channel->band == NL80211_BAND_5GHZ)
 		frame.rate = WSM_TRANSMIT_RATE_6;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 	frame.skb = ieee80211_beacon_get(priv->hw, priv->vif, 0);
-#else
-	frame.skb = ieee80211_beacon_get(priv->hw, priv->vif);
-#endif
 	if (WARN_ON(!frame.skb))
 		return -ENOMEM;
 
@@ -1145,13 +1114,7 @@ static int xradio_upload_null(struct xradio_vif *priv)
 		.rate = 0xFF,
 	};
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 	frame.skb = ieee80211_nullfunc_get(priv->hw, priv->vif, 0, false);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 17))
-	frame.skb = ieee80211_nullfunc_get(priv->hw, priv->vif, false);
-#else
-	frame.skb = ieee80211_nullfunc_get(priv->hw, priv->vif);
-#endif
 	if (WARN_ON(!frame.skb))
 		return -ENOMEM;
 
@@ -1262,11 +1225,7 @@ static int xradio_start_ap(struct xradio_vif *priv)
 
 #ifndef HIDDEN_SSID
 	/* Get SSID */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 	skb = ieee80211_beacon_get(priv->hw, priv->vif, 0);
-#else
-	skb = ieee80211_beacon_get(priv->hw, priv->vif);
-#endif
 	if (WARN_ON(!skb)) {
 		ap_printk(XRADIO_DBG_ERROR,"%s, ieee80211_beacon_get failed\n", __func__);
 		return -ENOMEM;
@@ -1592,11 +1551,7 @@ void xradio_ht_oper_update_work(struct work_struct *work)
 		.count = 1,
 	};
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 	skb = ieee80211_beacon_get(priv->hw, priv->vif, 0);
-#else
-	skb = ieee80211_beacon_get(priv->hw, priv->vif);
-#endif
 	if (WARN_ON(!skb))
 		return;
 

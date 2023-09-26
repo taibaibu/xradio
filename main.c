@@ -361,13 +361,7 @@ struct ieee80211_hw *xradio_init_common(size_t hw_priv_data_len)
 	INIT_WORK(&hw_priv->event_handler, xradio_event_handler);
 	INIT_WORK(&hw_priv->ba_work, xradio_ba_work);
 	spin_lock_init(&hw_priv->ba_lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 	timer_setup(&hw_priv->ba_timer, xradio_ba_timer, 0);
-#else
-	init_timer(&hw_priv->ba_timer);
-	hw_priv->ba_timer.data = (unsigned long)hw_priv;
-	hw_priv->ba_timer.function = xradio_ba_timer;
-#endif
 	if (unlikely(xradio_queue_stats_init(&hw_priv->tx_queue_stats,
 			WLAN_LINK_ID_MAX,sizeof(int[WLAN_LINK_ID_MAX]),xradio_skb_dtor, hw_priv))) {
 		ieee80211_free_hw(hw);
@@ -503,12 +497,7 @@ int xradio_core_init(struct sdio_func* func)
 	int if_id;
 	struct ieee80211_hw *dev;
 	struct xradio_common *hw_priv;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
 	unsigned char addr[ETH_ALEN];
-#else
-	unsigned char randomaddr[ETH_ALEN];
-	const unsigned char *addr = NULL;
-#endif
 
 	//init xradio_common
 	dev = xradio_init_common(sizeof(struct xradio_common));
@@ -521,7 +510,6 @@ int xradio_core_init(struct sdio_func* func)
 	hw_priv->sdio_func = func;
 	sdio_set_drvdata(func, hw_priv);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
 	// fill in mac addresses
 	if (hw_priv->pdev->of_node) {
 		err = of_get_mac_address(hw_priv->pdev->of_node, addr);
@@ -530,17 +518,6 @@ int xradio_core_init(struct sdio_func* func)
 		dev_warn(hw_priv->pdev, "no mac address provided, using random\n");
 		eth_random_addr(addr);
 	}
-#else
-	// fill in mac addresses
-	if (hw_priv->pdev->of_node) {
-		addr = of_get_mac_address(hw_priv->pdev->of_node);
-	}
-	if (!addr) {
-		dev_warn(hw_priv->pdev, "no mac address provided, using random\n");
-		eth_random_addr(randomaddr);
-		addr = randomaddr;
-	}
-#endif
 
 	memcpy(hw_priv->addresses[0].addr, addr, ETH_ALEN);
 	memcpy(hw_priv->addresses[1].addr, addr, ETH_ALEN);

@@ -221,11 +221,7 @@ void xradio_pm_stay_awake(struct xradio_pm_state *pm,
 	pm_printk(XRADIO_DBG_MSG,"%s\n", __FUNCTION__);
 
 	spin_lock_bh(&pm->lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 	cur_tmo = pm->wakelock.ws.timer.expires - jiffies;
-#else
-	cur_tmo = pm->wakelock.expires - jiffies;
-#endif
 	if (!wake_lock_active(&pm->wakelock) || cur_tmo < (long)tmo)
 		wake_lock_timeout(&pm->wakelock, tmo);
 	spin_unlock_bh(&pm->lock);
@@ -234,11 +230,7 @@ void xradio_pm_lock_awake(struct xradio_pm_state *pm)
 {
 
 	spin_lock_bh(&pm->lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 	pm->expires_save = pm->wakelock.ws.timer.expires;
-#else
-	pm->expires_save = pm->wakelock.expires;
-#endif
 	wake_lock_timeout(&pm->wakelock, LONG_MAX);
 	spin_unlock_bh(&pm->lock);
 }
@@ -257,15 +249,9 @@ void xradio_pm_unlock_awake(struct xradio_pm_state *pm)
 #else /* CONFIG_WAKELOCK */
 
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 static void xradio_pm_stay_awake_tmo(struct timer_list *t)
 {
 	struct xradio_pm_state *pm = from_timer(pm, t, stay_awake);
-#else
-static void xradio_pm_stay_awake_tmo(unsigned long arg)
-{
-	struct xradio_pm_state *pm = (struct xradio_pm_state *)arg;
-#endif
 	(void)pm;
 }
 
@@ -277,13 +263,7 @@ int xradio_pm_init(struct xradio_pm_state *pm,
 
 	ret = xradio_pm_init_common(pm, hw_priv);
 	if (!ret) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 		timer_setup(&pm->stay_awake, xradio_pm_stay_awake_tmo, 0);
-#else
-		init_timer(&pm->stay_awake);
-		pm->stay_awake.data = (unsigned long)pm;
-		pm->stay_awake.function = xradio_pm_stay_awake_tmo;
-#endif
 	} else 
 		pm_printk(XRADIO_DBG_ERROR,"xradio_pm_init_common failed!\n");
 	return ret;

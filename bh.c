@@ -565,7 +565,8 @@ static int xradio_bh_rx(struct xradio_common *hw_priv, u16* nextlen) {
 		goto out;
 	}
 
-	ret = 1;
+	/* if *nextlen is 0, there are no more packets to receive */
+	ret = 1 && *nextlen;
 
 out:
 	/* Reclaim the SKB buffer */
@@ -753,13 +754,16 @@ static int xradio_bh(void *arg)
 	long status;
 
 	for (;;) {
-		timeout = HZ / 30;
+		/* if we got awaken by interrupt last time, there is a good chance
+		* to receive more data soon. Use the shortest sleep time in case
+		* we miss an interrupt */
+		timeout = wake ? 1 : HZ / 30;
 
 		// wait for something to happen or a timeout
 		status = wait_event_interruptible_timeout(hw_priv->bh_wq, ( {
-					wake = atomic_xchg(&hw_priv->bh_tx, 0);
 					term = kthread_should_stop();
 					suspend = atomic_read(&hw_priv->bh_suspend);
+                    wake = atomic_xchg(&hw_priv->bh_tx, 0);
 					(wake || term || suspend);}), timeout);
 
 		if (wake) {
@@ -774,8 +778,17 @@ static int xradio_bh(void *arg)
 					hw_priv->bh_error, status);
 			break;
 		} else if (!status) {
+            /* wait timed out
+			* check if a late interrupt arrived in the last moment */
+			if (atomic_xchg(&hw_priv->bh_tx, 0))
+			{
+				wake = 1;
+				if(xradio_bh_exchange(hw_priv) < 0){
+				break;
+				}
+			}
 			/* check if there is data waiting but we missed the interrupt*/
-			if (xradio_bh_rx_availlen(hw_priv) > 0) {
+			else if (xradio_bh_rx_availlen(hw_priv) > 0) {
 				dev_warn(hw_priv->pdev, "missed interrupt\n");
 				if(xradio_bh_exchange(hw_priv) < 0){
 					break;

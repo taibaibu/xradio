@@ -31,11 +31,7 @@
 #include "net/mac80211.h"
 
 #ifdef TES_P2P_0002_ROC_RESTART
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
 #include <linux/ktime.h>
-#else
-#include <linux/time.h>
-#endif
 #endif
 
 #define WEP_ENCRYPT_HDR_SIZE    4
@@ -663,14 +659,9 @@ void xradio_configure_filter(struct ieee80211_hw *hw,
 	}
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 int xradio_conf_tx(struct ieee80211_hw *dev, struct ieee80211_vif *vif,
                    unsigned int link_id, u16 queue,
 		   const struct ieee80211_tx_queue_params *params)
-#else
-int xradio_conf_tx(struct ieee80211_hw *dev, struct ieee80211_vif *vif,
-                   u16 queue, const struct ieee80211_tx_queue_params *params)
-#endif
 {
 	struct xradio_common *hw_priv = dev->priv;
 	struct xradio_vif *priv = xrwl_get_vif_from_ieee80211(vif);
@@ -909,22 +900,13 @@ int xradio_remain_on_channel(struct ieee80211_hw *hw,
 	int i = 0;
 	int if_id;
 #ifdef	TES_P2P_0002_ROC_RESTART
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
 	struct timespec64 TES_P2P_0002_tmval;
-#else
-	struct timeval TES_P2P_0002_tmval;
-#endif
 #endif
 
 
 #ifdef	TES_P2P_0002_ROC_RESTART
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
 	ktime_get_real_ts64(&TES_P2P_0002_tmval);
 	TES_P2P_0002_roc_usec = (s32)TES_P2P_0002_tmval.tv_nsec/1000;
-#else
-	do_gettimeofday(&TES_P2P_0002_tmval);
-	TES_P2P_0002_roc_usec = (s32)TES_P2P_0002_tmval.tv_usec;
-#endif
 	TES_P2P_0002_roc_dur  = (s32)duration;
 	TES_P2P_0002_roc_sec  = (s32)TES_P2P_0002_tmval.tv_sec;
 #endif
@@ -973,12 +955,8 @@ int xradio_remain_on_channel(struct ieee80211_hw *hw,
 	return ret;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 int xradio_cancel_remain_on_channel(struct ieee80211_hw *hw,
 				    struct ieee80211_vif *vif)
-#else
-int xradio_cancel_remain_on_channel(struct ieee80211_hw *hw)
-#endif
 {
 	struct xradio_common *hw_priv = hw->priv;
 
@@ -1760,15 +1738,9 @@ void xradio_ba_work(struct work_struct *work)
 	wsm_unlock_tx(hw_priv);
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 void xradio_ba_timer(struct timer_list *t)
 {
 	struct xradio_common *hw_priv = from_timer(hw_priv, t, ba_timer);
-#else
-void xradio_ba_timer(unsigned long arg)
-{
-	struct xradio_common *hw_priv = (struct xradio_common *)arg;
-#endif
 	bool ba_ena;
 
 
@@ -1851,13 +1823,7 @@ int xradio_vif_setup(struct xradio_vif *priv)
 #ifdef AP_HT_CAP_UPDATE
         INIT_WORK(&priv->ht_oper_update_work, xradio_ht_oper_update_work);
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 	timer_setup(&priv->mcast_timeout, xradio_mcast_timeout, 0);
-#else
-	init_timer(&priv->mcast_timeout);
-	priv->mcast_timeout.data = (unsigned long)priv;
-	priv->mcast_timeout.function = xradio_mcast_timeout;
-#endif
 	priv->setbssparams_done = false;
 	priv->power_set_true = 0;
 	priv->user_power_set_true = 0;
